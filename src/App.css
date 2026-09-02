@@ -781,7 +781,8 @@
   z-index: 100;
 }
 
-.popover-menu button {
+.popover-menu button,
+.popover-menu .menu-link-btn {
   width: 100%;
   border: none;
   background: transparent;
@@ -794,9 +795,12 @@
   color: var(--text-primary);
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
-.popover-menu button:hover {
+.popover-menu button:hover,
+.popover-menu .menu-link-btn:hover {
   background: var(--bg-hover);
 }
 
@@ -1648,24 +1652,33 @@
 
 @media (max-width: 680px) {
   .topbar {
-    padding: 10px 12px;
-    gap: 8px;
+    padding: 10px 14px;
+    gap: 10px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topbar-row-primary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
   }
 
   .search-wrapper {
-    flex: 1;
-    max-width: none;
+    width: 100%;
   }
 
   .search-box {
-    padding: 7px 12px;
+    padding: 8px 14px;
+    width: 100%;
   }
 
   .brand-text {
     display: none;
   }
 
-  .storage-pill-btn span {
+  .storage-pill-btn .count-badge {
     display: none;
   }
 
@@ -1689,37 +1702,49 @@
     gap: 12px;
   }
 
+  /* Batch Action Bar Mobile Bottom Sheet */
   .batch-action-bar {
-    width: 94vw;
-    flex-direction: column;
-    gap: 10px;
-    border-radius: var(--radius-lg);
-    bottom: 12px;
-    padding: 12px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100vw;
+    border-radius: 24px 24px 0 0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 8px));
+    box-sizing: border-box;
+    transform: none;
+    margin: 0;
+    box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.45);
+    background: rgba(15, 23, 42, 0.96);
   }
 
   .batch-count-group {
     border-right: none;
     padding-right: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-    padding-bottom: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 4px;
     width: 100%;
     justify-content: space-between;
   }
 
   .batch-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
     width: 100%;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    gap: 6px;
   }
 
   .batch-btn {
-    flex: 1;
-    min-width: 70px;
+    width: 100%;
     justify-content: center;
-    padding: 8px 10px;
-    font-size: 0.78rem;
+    padding: 10px 8px;
+    font-size: 0.82rem;
+  }
+
+  .batch-btn-primary {
+    background: var(--brand-gradient) !important;
+    color: #ffffff !important;
   }
 
   /* Lightbox Mobile Adjustments */

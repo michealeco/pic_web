@@ -1,6 +1,5 @@
 import React from 'react'
 import {
-  CheckSquare,
   Download,
   RotateCcw,
   Star,
@@ -39,6 +38,11 @@ export function BatchActionBar({
       <div className="batch-actions">
         {!isTrashView ? (
           <>
+            <button className="batch-btn batch-btn-primary" onClick={onBatchDownload}>
+              <Download size={16} />
+              <span>Download ({selectedCount})</span>
+            </button>
+
             <button className="batch-btn" onClick={() => onBatchStar(true)}>
               <Star size={16} />
               <span>Star</span>
@@ -49,11 +53,6 @@ export function BatchActionBar({
               <span>Unstar</span>
             </button>
 
-            <button className="batch-btn" onClick={onBatchDownload}>
-              <Download size={16} />
-              <span>Download</span>
-            </button>
-
             <button className="batch-btn batch-btn-danger" onClick={onBatchTrash}>
               <Trash2 size={16} />
               <span>Trash</span>
@@ -61,14 +60,14 @@ export function BatchActionBar({
           </>
         ) : (
           <>
-            <button className="batch-btn" onClick={onBatchRestore}>
+            <button className="batch-btn batch-btn-primary" onClick={onBatchRestore}>
               <RotateCcw size={16} />
               <span>Restore Selected</span>
             </button>
 
             <button className="batch-btn batch-btn-danger" onClick={onBatchTrash}>
               <Trash2 size={16} />
-              <span>Delete Permanently</span>
+              <span>Delete</span>
             </button>
           </>
         )}

@@ -155,15 +155,20 @@ export function PhotoCard({
                   <span>{photo.starred ? 'Remove Star' : 'Add Star'}</span>
                 </button>
 
-                <button
+                <a
+                  href={photo.url}
+                  download={photo.name}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="menu-link-btn"
                   onClick={() => {
                     setMenuOpen(false)
                     onDownload(photo)
                   }}
                 >
                   <Download size={15} />
-                  <span>Download</span>
-                </button>
+                  <span>Download Image</span>
+                </a>
 
                 <button
                   onClick={() => {
