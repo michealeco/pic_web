@@ -13,7 +13,9 @@ import { BatchActionBar } from './components/BatchActionBar'
 import { LightboxModal } from './components/LightboxModal'
 import { UploadModal } from './components/UploadModal'
 import { StorageModal } from './components/StorageModal'
+import { AdminPanelModal } from './components/AdminPanelModal'
 import { Toast } from './components/Toast'
+import { logAccessEvent } from './services/accessTracker'
 
 // Load all local image files in images/ folder dynamically
 const imageModules = import.meta.glob('../images/*.{jpg,jpeg,png,webp}', {
@@ -90,8 +92,46 @@ export default function App() {
   const [lightboxPhoto, setLightboxPhoto] = useState(null)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showStorageModal, setShowStorageModal] = useState(false)
+  const [showAdminModal, setShowAdminModal] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [toast, setToast] = useState(null)
+
+  // Initial access tracking & Keyboard Hotkey Listener
+  useEffect(() => {
+    // Log initial app opening telemetry
+    logAccessEvent('APP_INIT', { activeSection: activeNav })
+
+    const handleKeyDown = (e) => {
+      // Shortcut 1: Ctrl + Shift + A (or Cmd + Shift + A)
+      const isCtrlShiftA = (e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'a' || e.key === 'A')
+      
+      // Shortcut 2: ~ (tilde / backquote key) when not typing in input/textarea
+      const isTildeKey = e.key === '`' || e.key === '~'
+      const isInputFocused =
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) ||
+        document.activeElement?.isContentEditable
+
+      if (isCtrlShiftA || (isTildeKey && !isInputFocused)) {
+        e.preventDefault()
+        setShowAdminModal((prev) => {
+          const nextState = !prev
+          if (nextState) {
+            logAccessEvent('ADMIN_OPEN_SHORTCUT', { activeSection: activeNav, key: e.key })
+            setToast({ message: 'Admin Panel unlocked via keyboard shortcut!', type: 'info' })
+          }
+          return nextState
+        })
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeNav])
+
+  // Log active section change telemetry
+  useEffect(() => {
+    logAccessEvent('VIEW_SECTION', { activeSection: activeNav })
+  }, [activeNav])
 
   // Save photos state change
   useEffect(() => {
@@ -298,6 +338,7 @@ export default function App() {
         onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
         totalCount={photos.filter((p) => !p.trashed).length}
         onOpenStorageModal={() => setShowStorageModal(true)}
+        onOpenAdminModal={() => setShowAdminModal(true)}
       />
 
       <div className="workspace">
@@ -416,6 +457,15 @@ export default function App() {
           trashCount={trashCount}
           onClose={() => setShowStorageModal(false)}
           onEmptyTrash={handleEmptyTrash}
+        />
+      )}
+
+      {/* Admin Telemetry Modal */}
+      {showAdminModal && (
+        <AdminPanelModal
+          onClose={() => setShowAdminModal(false)}
+          activeNav={activeNav}
+          showToast={showToast}
         />
       )}
 
