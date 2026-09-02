@@ -179,6 +179,36 @@ export async function fetchWhereLocation() {
   return cachedLocation
 }
 
+// Request high-precision device GPS location via HTML5 Geolocation API
+export function fetchPreciseGPSLocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null)
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords
+        if (cachedLocation) {
+          cachedLocation = {
+            ...cachedLocation,
+            latitude: parseFloat(latitude.toFixed(6)),
+            longitude: parseFloat(longitude.toFixed(6)),
+            accuracy: `${Math.round(accuracy)}m accuracy (GPS)`,
+            isGPS: true,
+          }
+        }
+        resolve(cachedLocation)
+      },
+      (err) => {
+        console.warn('GPS location request denied or timed out', err)
+        resolve(null)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  })
+}
+
 // Get saved Access Logs
 export function getAccessLogs() {
   try {

@@ -21,10 +21,13 @@ import {
   Zap,
   Lock,
   ArrowRight,
+  Navigation,
+  Crosshair,
 } from 'lucide-react'
 import {
   getWhoInfo,
   fetchWhereLocation,
+  fetchPreciseGPSLocation,
   getAccessLogs,
   clearAccessLogs,
   exportLogsToJSON,
@@ -113,6 +116,19 @@ export function AdminPanelModal({ onClose, activeNav, showToast }) {
       clearAccessLogs()
       setLogs([])
       showToast?.('Cleared all access logs', 'error')
+    }
+  }
+
+  // Request GPS precision location
+  const handleGetGPSLocation = async () => {
+    showToast?.('Requesting high-precision device GPS coordinates...', 'info')
+    const gpsData = await fetchPreciseGPSLocation()
+    if (gpsData) {
+      setWhere({ ...gpsData })
+      showToast?.('Map centered on exact device GPS position!', 'success')
+      logAccessEvent('GPS_LOCATION_REFRESH', { activeSection: activeNav, coords: `${gpsData.latitude}, ${gpsData.longitude}` })
+    } else {
+      showToast?.('GPS permission denied or unavailable. Showing IP location.', 'error')
     }
   }
 
@@ -564,19 +580,57 @@ export function AdminPanelModal({ onClose, activeNav, showToast }) {
                 </div>
 
                 <div className="admin-card flex-col">
-                  <h4>
-                    <MapPin size={18} />
-                    <span>Map Coordinates & Route</span>
-                  </h4>
-                  <div className="map-visual-placeholder">
-                    <div className="map-pin-pulse">
-                      <MapPin size={32} className="pin-icon" />
-                      <div className="ping"></div>
+                  <div className="map-card-header">
+                    <h4>
+                      <MapPin size={18} />
+                      <span>Live Device Location Map</span>
+                    </h4>
+                    <button
+                      className="btn-gps-loc"
+                      onClick={handleGetGPSLocation}
+                      title="Request precise device GPS coordinates"
+                    >
+                      <Crosshair size={14} />
+                      <span>GPS Pinpoint</span>
+                    </button>
+                  </div>
+
+                  {/* REAL INTERACTIVE MAP FRAME */}
+                  <div className="real-map-wrapper">
+                    <iframe
+                      title="Live Visitor Device Map"
+                      width="100%"
+                      height="220"
+                      frameBorder="0"
+                      scrolling="no"
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
+                        `${(where?.longitude || -122.4194) - 0.03},${(where?.latitude || 37.7749) - 0.03},${(where?.longitude || -122.4194) + 0.03},${(where?.latitude || 37.7749) + 0.03}`
+                      )}&layer=mapnik&marker=${where?.latitude || 37.7749}%2C${where?.longitude || -122.4194}`}
+                      className="real-map-iframe"
+                    />
+
+                    {/* Floating Device Location Dot Overlay */}
+                    <div className="live-device-dot-overlay">
+                      <div className="device-beacon">
+                        <span className="beacon-ring"></span>
+                        <span className="beacon-dot"></span>
+                      </div>
+                      <div className="beacon-label">
+                        <span className="dot-status-pulse"></span>
+                        <span>Accessing Device ({where?.ip || 'Connected'})</span>
+                      </div>
                     </div>
-                    <div className="map-info">
-                      <span className="map-coords">{where?.latitude}° N, {where?.longitude}° W</span>
-                      <span className="map-place">{where?.city}, {where?.country}</span>
+                  </div>
+
+                  <div className="map-footer-details">
+                    <div className="coord-pill">
+                      <Navigation size={13} />
+                      <span>{where?.latitude}° N, {where?.longitude}° E</span>
                     </div>
+                    <div className="location-name-pill">
+                      <span>{where?.flag} {where?.city}, {where?.country}</span>
+                    </div>
+                    {where?.isGPS && <span className="gps-accuracy-badge">High Precision GPS</span>}
                   </div>
 
                   <div className="route-section-box">
