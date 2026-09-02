@@ -7,7 +7,6 @@ import {
   Sun,
   X,
   Sparkles,
-  ShieldCheck,
 } from 'lucide-react'
 
 export function Navbar({
@@ -18,7 +17,6 @@ export function Navbar({
   onToggleMobileSidebar,
   totalCount,
   onOpenStorageModal,
-  onOpenAdminModal,
 }) {
   return (
     <header className="topbar">
@@ -45,16 +43,6 @@ export function Navbar({
 
         <div className="top-actions">
           <button
-            className="icon-button admin-trigger-nav-btn"
-            onClick={onOpenAdminModal}
-            title="Open Admin Panel (Shortcut: Ctrl + Shift + A or ~)"
-            aria-label="Admin Panel"
-          >
-            <ShieldCheck size={18} />
-            <span className="admin-nav-badge">Admin</span>
-          </button>
-
-          <button
             className="theme-toggle-btn icon-button"
             onClick={toggleTheme}
             title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} mode`}
@@ -74,8 +62,7 @@ export function Navbar({
 
           <div
             className="user-avatar-btn"
-            onClick={onOpenAdminModal}
-            title="Account Settings & Admin Telemetry (John S. • Ctrl+Shift+A)"
+            title="Account Settings (John S.)"
           >
             <span>JS</span>
           </div>

@@ -19,6 +19,8 @@ import {
   FileCode,
   Terminal,
   Zap,
+  Lock,
+  ArrowRight,
 } from 'lucide-react'
 import {
   getWhoInfo,
@@ -30,7 +32,15 @@ import {
   logAccessEvent,
 } from '../services/accessTracker'
 
+const ADMIN_PASSCODE = 'admin123'
+
 export function AdminPanelModal({ onClose, activeNav, showToast }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('admin_session_auth') === 'true'
+  })
+  const [passcode, setPasscode] = useState('')
+  const [passError, setPassError] = useState(false)
+
   const [activeTab, setActiveTab] = useState('overview')
   const [who, setWho] = useState(() => getWhoInfo())
   const [where, setWhere] = useState(null)
@@ -39,6 +49,29 @@ export function AdminPanelModal({ onClose, activeNav, showToast }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState('ALL')
   const [sessionTime, setSessionTime] = useState(0)
+
+  // Handle PIN authentication submit
+  const handleAuthSubmit = (e) => {
+    e.preventDefault()
+    if (passcode.trim() === ADMIN_PASSCODE) {
+      sessionStorage.setItem('admin_session_auth', 'true')
+      setIsAuthenticated(true)
+      setPassError(false)
+      showToast?.('Admin Telemetry Unlocked', 'success')
+      logAccessEvent('ADMIN_AUTH_SUCCESS', { activeSection: activeNav })
+    } else {
+      setPassError(true)
+      showToast?.('Invalid Admin Passcode', 'error')
+    }
+  }
+
+  // Handle Logout / Lock
+  const handleLockAdmin = () => {
+    sessionStorage.removeItem('admin_session_auth')
+    setIsAuthenticated(false)
+    setPasscode('')
+    showToast?.('Admin Panel Locked', 'info')
+  }
 
   // Session duration timer
   useEffect(() => {
@@ -152,6 +185,56 @@ export function AdminPanelModal({ onClose, activeNav, showToast }) {
     }
   }, [logs])
 
+  if (!isAuthenticated) {
+    return (
+      <div className="admin-overlay animate-fade-in" onClick={onClose}>
+        <div
+          className="admin-modal admin-auth-modal animate-pop-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="admin-auth-header">
+            <div className="admin-badge-glow purple">
+              <Lock size={24} />
+            </div>
+            <h2>Security Authentication Required</h2>
+            <p>Enter the admin passcode to unlock system access telemetry & visitor logs.</p>
+          </div>
+
+          <form onSubmit={handleAuthSubmit} className="admin-auth-form">
+            <div className="auth-input-group">
+              <label htmlFor="admin-passcode-input">Admin Passcode</label>
+              <div className={`auth-input-wrapper ${passError ? 'error' : ''}`}>
+                <Lock size={16} className="auth-icon" />
+                <input
+                  id="admin-passcode-input"
+                  type="password"
+                  autoFocus
+                  placeholder="Enter passcode (default: admin123)"
+                  value={passcode}
+                  onChange={(e) => {
+                    setPasscode(e.target.value)
+                    setPassError(false)
+                  }}
+                />
+                <button type="submit" className="auth-submit-btn">
+                  <span>Unlock</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+              {passError && <span className="auth-error-msg">Incorrect passcode. Default passcode is admin123.</span>}
+            </div>
+
+            <div className="auth-footer-actions">
+              <button type="button" className="btn-cancel" onClick={onClose}>
+                Close
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="admin-overlay animate-fade-in" onClick={onClose}>
       <div
@@ -179,10 +262,9 @@ export function AdminPanelModal({ onClose, activeNav, showToast }) {
           </div>
 
           <div className="admin-header-actions">
-            <div className="hotkey-badge" title="Press Ctrl + Shift + A or ~ key anytime to toggle">
-              <Key size={13} />
-              <span>Ctrl + Shift + A</span>
-            </div>
+            <button className="icon-btn-rounded" onClick={handleLockAdmin} title="Lock Admin Session">
+              <Lock size={16} />
+            </button>
             <button className="icon-btn-rounded" onClick={handleRefresh} title="Refresh Telemetry">
               <RefreshCw size={16} className={loadingWhere ? 'animate-spin' : ''} />
             </button>

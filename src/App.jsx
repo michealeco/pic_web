@@ -117,7 +117,6 @@ export default function App() {
           const nextState = !prev
           if (nextState) {
             logAccessEvent('ADMIN_OPEN_SHORTCUT', { activeSection: activeNav, key: e.key })
-            setToast({ message: 'Admin Panel unlocked via keyboard shortcut!', type: 'info' })
           }
           return nextState
         })
