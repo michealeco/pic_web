@@ -37,27 +37,22 @@ const defaultPhotos = Object.entries(imageModules).map(([path, url], index) => {
   }
 })
 
-// Helper to trigger file download
-async function downloadSinglePhoto(photo) {
+// Helper to trigger file download synchronously for mobile phone compatibility
+function downloadSinglePhoto(photo) {
+  if (!photo || !photo.url) return
+  
   try {
-    const response = await fetch(photo.url)
-    const blob = await response.blob()
-    const blobUrl = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = blobUrl
-    link.download = photo.name
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
-  } catch (err) {
     const link = document.createElement('a')
     link.href = photo.url
     link.download = photo.name
     link.target = '_blank'
+    link.rel = 'noopener noreferrer'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  } catch (err) {
+    console.error('Download error:', err)
+    window.open(photo.url, '_blank')
   }
 }
 

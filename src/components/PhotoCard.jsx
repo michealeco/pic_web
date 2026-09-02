@@ -46,11 +46,16 @@ export function PhotoCard({
   }, [menuOpen])
 
   const handleCardClick = (e) => {
-    // If user clicked action buttons or checkbox, don't trigger select
+    // If user clicked action buttons or checkbox, don't trigger
     if (e.target.closest('.card-action-btn') || e.target.closest('.popover-menu')) {
       return
     }
-    onToggleSelect(photo.id)
+    // On mobile screens, tap thumbnail to preview
+    if (window.innerWidth <= 768) {
+      onPreview(photo)
+    } else {
+      onToggleSelect(photo.id)
+    }
   }
 
   const handleDoubleClick = () => {

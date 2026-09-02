@@ -135,13 +135,17 @@ export function LightboxModal({
               <Star size={18} fill={photo.starred ? 'currentColor' : 'none'} />
             </button>
 
-            <button
+            <a
+              href={photo.url}
+              download={photo.name}
+              target="_blank"
+              rel="noopener noreferrer"
               className="lb-btn"
               onClick={() => onDownload(photo)}
               title="Download image"
             >
               <Download size={18} />
-            </button>
+            </a>
 
             <button
               className="lb-btn"
