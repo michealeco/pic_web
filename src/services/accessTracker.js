@@ -2,7 +2,12 @@
  * Access Tracker Service
  * Tracks "WHO" (Visitor ID, Device Specs, Browser, OS, Session)
  * and "WHERE" (Public IP, Geolocation, ISP, App Section/Route)
+ *
+ * Also syncs to Firebase Realtime Database when configured,
+ * so ALL devices that access the webapp are visible in the Admin Panel.
  */
+
+import { pushLogToCloud, upsertDeviceToCloud, isCloudSyncEnabled } from './cloudSync'
 
 const VISITOR_KEY = 'picspace_visitor_id_v1'
 const LOGS_KEY = 'picspace_access_logs_v1'
@@ -253,15 +258,53 @@ export async function logAccessEvent(eventType, details = {}) {
       flag: where.flag,
       isp: where.isp,
       coordinates: `${where.latitude}, ${where.longitude}`,
+      latitude: where.latitude,
+      longitude: where.longitude,
+      city: where.city,
+      country: where.country,
       activeSection: details.activeSection || 'My Drive',
       path: window.location.pathname || '/',
     },
     meta: details.meta || {},
   }
 
+  // Save to local storage (always)
   const existing = getAccessLogs()
   const updated = [newLog, ...existing]
   saveAccessLogs(updated)
+
+  // Also sync to Firebase cloud for cross-device admin visibility
+  if (isCloudSyncEnabled()) {
+    // Push this specific log entry
+    pushLogToCloud(newLog).catch(() => {})
+
+    // Upsert device profile so admin can see all unique devices
+    upsertDeviceToCloud(who.visitorId, {
+      visitorId: who.visitorId,
+      browserName: who.browserName,
+      browserVersion: who.browserVersion,
+      browser: `${who.browserName} ${who.browserVersion}`,
+      os: who.os,
+      platform: who.platform,
+      deviceType: who.deviceType,
+      screen: who.screenResolution,
+      language: who.language,
+      timeZone: who.timeZone,
+      cores: who.cores,
+      ip: where.ip,
+      location: `${where.city}, ${where.region}, ${where.country}`,
+      city: where.city,
+      region: where.region,
+      country: where.country,
+      flag: where.flag,
+      isp: where.isp,
+      latitude: where.latitude,
+      longitude: where.longitude,
+      lastActiveSection: details.activeSection || 'My Drive',
+      firstSeen: newLog.timestamp,
+    }).catch(() => {})
+  }
+
   return newLog
 }
 

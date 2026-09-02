@@ -34,6 +34,7 @@ import {
   exportLogsToCSV,
   logAccessEvent,
 } from '../services/accessTracker'
+import { subscribeToAllDevices, subscribeToAllLogs, isCloudSyncEnabled } from '../services/cloudSync'
 
 const ADMIN_PASSCODE = 'admin123'
 
@@ -52,6 +53,10 @@ export function AdminPanelModal({ onClose, activeNav, showToast }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState('ALL')
   const [sessionTime, setSessionTime] = useState(0)
+  const [allDevices, setAllDevices] = useState([])
+  const [allCloudLogs, setAllCloudLogs] = useState([])
+  const [cloudEnabled] = useState(() => isCloudSyncEnabled())
+  const [deviceSearch, setDeviceSearch] = useState('')
 
   // Handle PIN authentication submit
   const handleAuthSubmit = (e) => {
@@ -98,6 +103,17 @@ export function AdminPanelModal({ onClose, activeNav, showToast }) {
       isMounted = false
     }
   }, [])
+
+  // Subscribe to real-time ALL DEVICES and ALL LOGS from Firebase when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const unsubDevices = subscribeToAllDevices((devices) => setAllDevices(devices))
+    const unsubLogs = subscribeToAllLogs((cloudLogs) => setAllCloudLogs(cloudLogs))
+    return () => {
+      unsubDevices()
+      unsubLogs()
+    }
+  }, [isAuthenticated])
 
   // Refresh logs data
   const handleRefresh = async () => {
@@ -318,7 +334,19 @@ export function AdminPanelModal({ onClose, activeNav, showToast }) {
             onClick={() => setActiveTab('logs')}
           >
             <Terminal size={16} />
-            <span>Access Logs ({logs.length})</span>
+            <span>Access Logs ({cloudEnabled ? allCloudLogs.length : logs.length})</span>
+          </button>
+          <button
+            className={`admin-tab ${activeTab === 'devices' ? 'active' : ''}`}
+            onClick={() => setActiveTab('devices')}
+          >
+            <Monitor size={16} />
+            <span>
+              All Devices
+              {cloudEnabled && allDevices.length > 0 && (
+                <span className="tab-count-badge">{allDevices.length}</span>
+              )}
+            </span>
           </button>
           <button
             className={`admin-tab ${activeTab === 'settings' ? 'active' : ''}`}
@@ -758,7 +786,154 @@ export function AdminPanelModal({ onClose, activeNav, showToast }) {
             </div>
           )}
 
-          {/* TAB 5: HOTKEYS & SETTINGS */}
+          {/* TAB 5: ALL DEVICES */}
+          {activeTab === 'devices' && (
+            <div className="admin-tab-content animate-fade-in">
+              <div className="admin-card">
+                <div className="all-devices-header">
+                  <div>
+                    <h3>
+                      <Monitor size={20} />
+                      <span>All Devices That Accessed Picspace</span>
+                    </h3>
+                    <p className="admin-card-sub">
+                      {cloudEnabled
+                        ? `Real-time tracking via Firebase • ${allDevices.length} unique device${allDevices.length !== 1 ? 's' : ''} recorded`
+                        : 'Firebase not configured — only your local device is visible. See Hotkeys & Info tab to enable cross-device tracking.'}
+                    </p>
+                  </div>
+                  {cloudEnabled && (
+                    <span className="live-badge pulse-green">● LIVE</span>
+                  )}
+                </div>
+
+                {!cloudEnabled && (
+                  <div className="cloud-setup-banner">
+                    <div className="cloud-setup-icon">
+                      <Monitor size={28} />
+                    </div>
+                    <div>
+                      <h4>Enable Cross-Device Tracking</h4>
+                      <p>
+                        To see ALL visitors across every device, set up a free Firebase Realtime Database
+                        and update <code>src/services/firebaseConfig.js</code> with your project credentials.
+                        Then set <code>FIREBASE_ENABLED = true</code>.
+                      </p>
+                      <p className="cloud-setup-sub">Currently showing your local device below (localStorage only).</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Device list — cloud devices or local fallback */}
+                <div className="devices-grid">
+                  {(cloudEnabled ? allDevices : [{ visitorId: who.visitorId, browser: `${who.browserName} ${who.browserVersion}`, os: who.os, deviceType: who.deviceType, screen: who.screenResolution, ip: where?.ip, location: where ? `${where.city}, ${where.region}, ${where.country}` : 'Fetching...', flag: where?.flag || '🌐', isp: where?.isp, latitude: where?.latitude, longitude: where?.longitude, country: where?.country, city: where?.city, lastSeen: new Date().toISOString(), lastSeenDisplay: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), lastSeenDate: 'Today', firstSeen: where ? undefined : null }])
+                    .filter(d => !deviceSearch || JSON.stringify(d).toLowerCase().includes(deviceSearch.toLowerCase()))
+                    .map((device, idx) => {
+                      const lat = device.latitude ?? 0
+                      const lon = device.longitude ?? 0
+                      const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.08},${lat - 0.06},${lon + 0.08},${lat + 0.06}&layer=mapnik&marker=${lat},${lon}`
+                      const isCurrentDevice = device.visitorId === who.visitorId
+                      return (
+                        <div key={device.visitorId || idx} className={`device-card ${isCurrentDevice ? 'current-device' : ''}`}>
+                          <div className="device-card-header">
+                            <div className="device-card-icon">
+                              {device.deviceType?.toLowerCase().includes('mobile') ? '📱' : '🖥️'}
+                            </div>
+                            <div className="device-card-title">
+                              <span className="device-browser">{device.browser || 'Unknown Browser'}</span>
+                              <span className="device-os">{device.os || 'Unknown OS'}</span>
+                            </div>
+                            {isCurrentDevice && (
+                              <span className="current-device-badge">YOU</span>
+                            )}
+                          </div>
+
+                          <div className="device-map-mini">
+                            {lat !== 0 && lon !== 0 ? (
+                              <div className="map-container-mini">
+                                <iframe
+                                  src={mapUrl}
+                                  title={`Map for ${device.visitorId}`}
+                                  width="100%"
+                                  height="130"
+                                  style={{ border: 'none', borderRadius: '8px' }}
+                                  loading="lazy"
+                                />
+                                <div className="beacon-dot-mini">
+                                  <div className="beacon-pulse-mini" />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="map-placeholder-mini">
+                                <Globe size={24} />
+                                <span>Location unavailable</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="device-info-grid">
+                            <div className="device-info-row">
+                              <span className="di-label">📍 Location</span>
+                              <span className="di-value">{device.flag} {device.location || 'Unknown'}</span>
+                            </div>
+                            <div className="device-info-row">
+                              <span className="di-label">🌐 IP Address</span>
+                              <span className="di-value code">{device.ip || 'N/A'}</span>
+                            </div>
+                            <div className="device-info-row">
+                              <span className="di-label">🏢 ISP</span>
+                              <span className="di-value">{device.isp || 'N/A'}</span>
+                            </div>
+                            <div className="device-info-row">
+                              <span className="di-label">📡 Coordinates</span>
+                              <span className="di-value code">{lat.toFixed(4)}, {lon.toFixed(4)}</span>
+                            </div>
+                            <div className="device-info-row">
+                              <span className="di-label">💻 Screen</span>
+                              <span className="di-value">{device.screen || 'N/A'}</span>
+                            </div>
+                            <div className="device-info-row">
+                              <span className="di-label">🔑 Visitor ID</span>
+                              <span className="di-value code">{device.visitorId?.substring(0, 16)}...</span>
+                            </div>
+                          </div>
+
+                          <div className="device-card-footer">
+                            <span className="device-time">Last seen: {device.lastSeenDate || '—'} at {device.lastSeenDisplay || '—'}</span>
+                            {device.lastActiveSection && (
+                              <span className="section-badge small">{device.lastActiveSection}</span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+
+                {/* Search bar */}
+                {(cloudEnabled ? allDevices : [who]).length > 1 && (
+                  <div className="device-search-bar">
+                    <Search size={16} />
+                    <input
+                      type="text"
+                      placeholder="Search devices by browser, OS, IP, location..."
+                      value={deviceSearch}
+                      onChange={(e) => setDeviceSearch(e.target.value)}
+                      className="log-search-input"
+                    />
+                  </div>
+                )}
+
+                {cloudEnabled && allDevices.length === 0 && (
+                  <div className="empty-logs-box">
+                    <Monitor size={36} />
+                    <p>Waiting for devices to connect… Access logs will appear here in real time.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: HOTKEYS & SETTINGS */}
           {activeTab === 'settings' && (
             <div className="admin-tab-content animate-fade-in">
               <div className="admin-card primary-border">
